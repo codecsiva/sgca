@@ -4,13 +4,16 @@ from flask import Flask, request , Response, send_from_directory, render_templat
 import uuid
 from bson.json_util import dumps
 import datetime as dt
+import logging
 
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level="DEBUG")
 
 """
     app configurations.
 """
 app = Flask(__name__, static_folder="static")
-client = MongoClient('mongodb://localhost:27017/')
+client = MongoClient('mongodb://localhost:27017/',connect=False)
 db = client.stbtester
 
 
@@ -60,15 +63,23 @@ def get_results(job_id):
 @app.route("/stbt/test/results/", methods=["POST"])
 def insert_result():
     if request.method == 'POST':
-        data = request.json
+   	data = request.args
         try:
             print("data : {}".format(data))
-            date_time = dt.datetime.strptime(data['time'], "%Y-%m-%dT%H:%M:%S")
-            results = db.test_results.insert_one({'job_id': data['job_id'], 'time': date_time,
-                                                  'test_number': data['test_number'],
-                                                  'name': data['name'], 'result': data['test_result'],
-                                                  'test_link': data['test_link'],
-                                                  'reason': data['failure_reason']},
+	    time_parm = data['time'].encode('ascii','ignore')
+	    job_id_parm = data['job_id'].encode('ascii','ignore')
+	    test_no_parm = data['test_number'].encode('ascii','ignore')
+	    test_result_parm = data['result'].encode('ascii','ignore')
+	    test_link_parm = data['test_link'].encode('ascii','ignore')
+	    name_parm =data['name'].encode('ascii','ignore')
+	    reason_parm = data['failure_reason'].encode('ascii','ignore')
+
+            date_time = dt.datetime.strptime(time_parm, "%Y-%m-%dT%H:%M:%S")
+            results = db.test_results.insert_one({'job_id': job_id_parm, 'time': date_time,
+                                                  'test_number': test_no_parm,
+                                                  'name': name_parm, 'result': test_result_parm,
+                                                  'test_link': test_link_parm,
+                                                  'reason': reason_parm},
                                                  ).inserted_id
             print(results)
             return dumps({'status': True, 'message': 'success'})
@@ -87,4 +98,4 @@ def index():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
